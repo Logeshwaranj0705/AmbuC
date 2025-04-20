@@ -124,7 +124,7 @@ function degToRad(deg) {
 
 // Function to send location data to Python
 function sendLocationToPython(name, latitude, longitude, status, esp32_id) {
-    fetch("http://localhost:5000/location", {
+    fetch("https://ambuc-server.onrender.com/", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
