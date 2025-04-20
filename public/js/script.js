@@ -1,5 +1,5 @@
 const socket = io();
-let area = localStorage.getItem("area") || "None";
+let queue = JSON.parse(localStorage.getItem("queue")) || [];
 if (navigator.geolocation) {
     navigator.geolocation.watchPosition(
         (position) => {
@@ -7,7 +7,7 @@ if (navigator.geolocation) {
             socket.emit("send-location", { latitude, longitude });
 
             let closestLocation = null;
-            let minDistance = 10000;
+            let minDistance = 100;
 
             highlightLocations.forEach((location) => {
                 const distance = getDistanceFromLatLonInMeters(
@@ -16,40 +16,40 @@ if (navigator.geolocation) {
                     location.latitude,
                     location.longitude
                 );
-
                 if (distance <= minDistance) {
                     closestLocation = location;
                     minDistance = distance;
                 }
             });
+
             highlightLocations.forEach((location) => {
-                console.log(area);
                 if (location === closestLocation) {
                     const status = "start";
                     location.marker.setIcon(
                         L.icon({
                             iconUrl: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
-                            iconSize: [32, 32], // Adjust size if needed
+                            iconSize: [32, 32],
                         })
                     );
-                    if(area !== location.name){
+                    if (!queue.includes(location.name)) {
                         sendLocationToPython(location.name, location.latitude, location.longitude, status, location.esp32_id);
-                        localStorage.setItem("area", location.name);
-                        area=location.name;
+                        queue.push(location.name);
+                        localStorage.setItem("queue", JSON.stringify(queue));
+                        console.log("Current queue:", queue);
                     }
-                    
-                } else{
+                } else {
                     const status = "stop";
                     location.marker.setIcon(
                         L.icon({
                             iconUrl: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
-                            iconSize: [32, 32], // Adjust size if needed
+                            iconSize: [32, 32],
                         })
-                    );     
-                    if(area === location.name){
+                    );
+                    if (queue.includes(location.name)) {
                         sendLocationToPython(location.name, location.latitude, location.longitude, status, location.esp32_id);
-                        localStorage.setItem("area", "None");
-                        area="None";
+                        queue = queue.filter((item) => item !== location.name);
+                        localStorage.setItem("queue", JSON.stringify(queue));
+                        console.log("Current queue:", queue);
                     }
                 }
             });
@@ -70,19 +70,17 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "OpenStreetMap",
 }).addTo(map);
 
-// Predefined highlight locations
 const highlightLocations = [
-    { name: "Arcot Road", latitude: 13.0418592823117, longitude: 80.17641308680929,esp32_id: "esp32_001" },
-    { name: "Besant Nagar", latitude: 12.9960874, longitude: 80.2676685,esp32_id: "esp32_002" },
-    { name: "Anna Nagar Roundabout", latitude: 13.084663299999999, longitude: 80.21796674973545,esp32_id: "esp32_003" },
-    { name: "Infosys", latitude: 12.8925236, longitude: 80.2275312,esp32_id: "esp32_004" },
+    { name: "Arcot Road", latitude: 13.0418592823117, longitude: 80.17641308680929, esp32_id: "esp32_001" },
+    { name: "Besant Nagar", latitude: 12.9960874, longitude: 80.2676685, esp32_id: "esp32_002" },
+    { name: "Anna Nagar Roundabout", latitude: 13.084663299999999, longitude: 80.21796674973545, esp32_id: "esp32_003" },
+    { name: "Infosys", latitude: 12.8925236, longitude: 80.2275312, esp32_id: "esp32_004" },
 ];
 
-// Add markers for highlight locations
 highlightLocations.forEach((location) => {
     const marker = L.marker([location.latitude, location.longitude]).addTo(map);
     marker.bindPopup(`<b>${location.name}</b>`).openPopup();
-    location.marker = marker; // Store marker reference in the location object
+    location.marker = marker;
 });
 
 const markers = {};
@@ -100,36 +98,28 @@ socket.on("user-disconnected", (id) => {
     if (markers[id]) {
         map.removeLayer(markers[id]);
         delete markers[id];
-        highlightLocations.forEach((location) => {
-            const status="stop";
-            if(location.name === area){
-                sendLocationToPython(location.name, location.latitude, location.longitude, status, location.esp32_id);
-                area="None";
-            }
-        });
     }
+
 });
 
-// Function to calculate distance between two coordinates in meters
 function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
-    const R = 6371000; // Radius of the Earth in meters
+    const R = 6371000;
     const dLat = degToRad(lat2 - lat1);
     const dLon = degToRad(lon2 - lon1);
     const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
         Math.cos(degToRad(lat1)) *
-            Math.cos(degToRad(lat2)) *
-            Math.sin(dLon / 2) *
-            Math.sin(dLon / 2);
+        Math.cos(degToRad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // Distance in meters
+    return R * c;
 }
 
 function degToRad(deg) {
     return deg * (Math.PI / 180);
 }
 
-// Function to send location data to Python
 function sendLocationToPython(name, latitude, longitude, status, esp32_id) {
     fetch("https://ambuc-server.onrender.com/location", {
         method: "POST",
@@ -137,7 +127,7 @@ function sendLocationToPython(name, latitude, longitude, status, esp32_id) {
             "Content-Type": "application/json"
         },
         body: JSON.stringify({
-            esp32_id: esp32_id,  // Send ESP32 ID here
+            esp32_id: esp32_id,
             name: name,
             latitude: latitude,
             longitude: longitude,
