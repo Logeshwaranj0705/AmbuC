@@ -1,5 +1,0 @@
-Flask
-requests
-socketio
-flask-cors
-os
