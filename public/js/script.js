@@ -31,7 +31,7 @@ if (navigator.geolocation) {
                             iconUrl: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
                             iconSize: [32, 32], // Adjust size if needed
                         })
-                    );                      
+                    );
                     if(area !== location.name){
                         sendLocationToPython(location.name, location.latitude, location.longitude, status, location.esp32_id);
                         localStorage.setItem("area", location.name);
@@ -45,7 +45,7 @@ if (navigator.geolocation) {
                             iconUrl: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
                             iconSize: [32, 32], // Adjust size if needed
                         })
-                    );                    
+                    );     
                     if(area === location.name){
                         sendLocationToPython(location.name, location.latitude, location.longitude, status, location.esp32_id);
                         localStorage.setItem("area", "None");
@@ -100,6 +100,13 @@ socket.on("user-disconnected", (id) => {
     if (markers[id]) {
         map.removeLayer(markers[id]);
         delete markers[id];
+        highlightLocations.forEach((location) => {
+            const status="stop";
+            if(location.name === area){
+                sendLocationToPython(location.name, location.latitude, location.longitude, status, location.esp32_id);
+                area="None";
+            }
+        });
     }
 });
 
