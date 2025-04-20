@@ -32,8 +32,9 @@ if (navigator.geolocation) {
                             iconSize: [32, 32], // Adjust size if needed
                         })
                     );
+                    sendLocationToPython(location.name, location.latitude, location.longitude, status, location.esp32_id);
                     if(area !== location.name){
-                        sendLocationToPython(location.name, location.latitude, location.longitude, status, location.esp32_id);
+                        
                         localStorage.setItem("area", location.name);
                         area=location.name;
                     }
@@ -45,9 +46,10 @@ if (navigator.geolocation) {
                             iconUrl: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
                             iconSize: [32, 32], // Adjust size if needed
                         })
-                    );     
+                    );
+                    sendLocationToPython(location.name, location.latitude, location.longitude, status, location.esp32_id);
                     if(area === location.name){
-                        sendLocationToPython(location.name, location.latitude, location.longitude, status, location.esp32_id);
+                        
                         localStorage.setItem("area", "None");
                         area="None";
                     }
