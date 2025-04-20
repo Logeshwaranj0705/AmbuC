@@ -7,7 +7,7 @@ if (navigator.geolocation) {
             socket.emit("send-location", { latitude, longitude });
 
             let closestLocation = null;
-            let minDistance = 10000;
+            let minDistance = 100;
 
             highlightLocations.forEach((location) => {
                 const distance = getDistanceFromLatLonInMeters(
